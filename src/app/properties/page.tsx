@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, Bed, Bath, Square, Filter, Search, Grid, List, Calendar } from 'lucide-react'
@@ -14,7 +14,7 @@ import { useLocations } from '@/hooks/useLocations'
 // Cache pour les propriétés
 const propertiesCache = new Map<string, { data: Property[], timestamp: number, ttl: number }>()
 
-export default function PropertiesPage() {
+function PropertiesContent() {
   const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -455,5 +455,26 @@ export default function PropertiesPage() {
         </div>
       </div>
     </Layout>
+  )
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={
+      <Layout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-gray-200 h-64 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Layout>
+    }>
+      <PropertiesContent />
+    </Suspense>
   )
 }
