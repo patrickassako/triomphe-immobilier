@@ -57,52 +57,82 @@ export default function AdminDashboard() {
     try {
       setLoading(true)
 
-      // Essayer Supabase, sinon utiliser les données mockées
-      try {
-        const [
-          propertiesResult,
-          usersResult,
-          contactsResult,
-          viewsResult,
-        ] = await Promise.all([
-          // Properties stats
-          Promise.all([
-            supabase.from('properties').select('*', { count: 'exact', head: true }),
-            supabase.from('properties').select('*', { count: 'exact', head: true }).eq('is_published', true),
-          ]),
-          // Users stats
-          supabase.from('users').select('*', { count: 'exact', head: true }),
-          // Contacts stats - utilise la nouvelle API
-          fetch('/api/contacts/stats').then(res => res.json()),
-          // Views stats
-          supabase.from('properties').select('views_count'),
-        ])
+      // Récupérer les stats et l'activité en parallèle
+      const [statsData, activityData] = await Promise.all([
+        fetchStats(),
+        fetchRecentActivity()
+      ])
 
-        const totalViews = viewsResult.data?.reduce((sum, property) => sum + (property.views_count || 0), 0) || 0
+      setStats(statsData)
+      setRecentActivity(activityData)
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-        // Parse contacts stats
-        const contactsStats = contactsResult.success ? contactsResult.data : { total: 0, new: 0 }
+  const fetchStats = async () => {
+    try {
+      const [
+        propertiesResult,
+        usersResult,
+        contactsResult,
+        viewsResult,
+      ] = await Promise.all([
+        // Properties stats
+        Promise.all([
+          supabase.from('properties').select('*', { count: 'exact', head: true }),
+          supabase.from('properties').select('*', { count: 'exact', head: true }).eq('is_published', true),
+        ]),
+        // Users stats
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        // Contacts stats - utilise la nouvelle API
+        fetch('/api/contacts/stats').then(res => res.json()),
+        // Views stats
+        supabase.from('properties').select('views_count'),
+      ])
 
-        setStats({
-          totalProperties: propertiesResult[0].count || 0,
-          publishedProperties: propertiesResult[1].count || 0,
-          totalUsers: usersResult.count || 0,
-          totalContacts: contactsStats.total || 0,
-          newContacts: contactsStats.new || 0,
-          totalViews,
-        })
-      } catch (supabaseError) {
-        console.log('Supabase non disponible, utilisation des données mockées')
-        
-        // Importer et utiliser les données mockées
-        const { mockStats, delay } = await import('@/lib/mockData')
-        await delay(500) // Simuler le délai réseau
-        
-        setStats(mockStats)
+      const totalViews = viewsResult.data?.reduce((sum, property) => sum + (property.views_count || 0), 0) || 0
+
+      // Parse contacts stats
+      const contactsStats = contactsResult.success ? contactsResult.data : { total: 0, new: 0 }
+
+      return {
+        totalProperties: propertiesResult[0].count || 0,
+        publishedProperties: propertiesResult[1].count || 0,
+        totalUsers: usersResult.count || 0,
+        totalContacts: contactsStats.total || 0,
+        newContacts: contactsStats.new || 0,
+        totalViews,
       }
+    } catch (supabaseError) {
+      console.log('Supabase non disponible, utilisation des données mockées')
+      
+      // Importer et utiliser les données mockées
+      const { mockStats, delay } = await import('@/lib/mockData')
+      await delay(500) // Simuler le délai réseau
+      
+      return mockStats
+    }
+  }
 
-      // Mock recent activity for demo
-      setRecentActivity([
+  const fetchRecentActivity = async () => {
+    try {
+      const response = await fetch('/api/dashboard/activity?limit=8')
+      const data = await response.json()
+      
+      if (data.success) {
+        return data.data
+      } else {
+        // Utiliser les données mockées en cas d'erreur
+        return data.data || []
+      }
+    } catch (error) {
+      console.error('Erreur récupération activité:', error)
+      
+      // Fallback avec données mockées
+      return [
         {
           id: '1',
           type: 'property',
@@ -130,16 +160,12 @@ export default function AdminDashboard() {
         {
           id: '4',
           type: 'property',
-          title: 'Propriété vendue',
+          title: 'Propriété mise à jour',
           description: 'Appartement 3 pièces Douala',
           time: 'Il y a 1 jour',
           status: 'warning'
         },
-      ])
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    } finally {
-      setLoading(false)
+      ]
     }
   }
 
@@ -166,6 +192,23 @@ export default function AdminDashboard() {
         return 'text-blue-600 bg-blue-100'
       default:
         return 'text-gray-600 bg-gray-100'
+    }
+  }
+
+  const handleActivityClick = (activity: RecentActivity) => {
+    // Rediriger selon le type d'activité
+    switch (activity.type) {
+      case 'property':
+        window.location.href = '/admin/properties'
+        break
+      case 'contact':
+        window.location.href = '/admin/contacts'
+        break
+      case 'user':
+        window.location.href = '/admin/users'
+        break
+      default:
+        console.log('Activité cliquée:', activity)
     }
   }
 
@@ -332,54 +375,104 @@ export default function AdminDashboard() {
 
         {/* Recent Activity */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center">
               <Clock className="h-5 w-5 mr-2 text-gray-600" />
               Activité récente
             </CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchDashboardData}
+              className="text-xs"
+            >
+              Actualiser
+            </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-2">
               {loading ? (
                 <div className="space-y-3">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="animate-pulse flex items-center space-x-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="animate-pulse flex items-center space-x-3 p-3">
                       <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1 space-y-2">
                         <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                         <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-2 bg-gray-200 rounded w-1/4"></div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : recentActivity.length > 0 ? (
-                recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getStatusColor(activity.status)}`}>
-                      {getActivityIcon(activity.type, activity.status)}
+                <div className="max-h-96 overflow-y-auto">
+                  {recentActivity.map((activity, index) => (
+                    <div 
+                      key={activity.id} 
+                      className={`flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-all duration-200 cursor-pointer border-l-2 ${
+                        index === 0 ? 'border-l-primary-500 bg-primary-50/50' : 'border-l-transparent'
+                      }`}
+                      onClick={() => handleActivityClick(activity)}
+                    >
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getStatusColor(activity.status)} transition-all duration-200`}>
+                        {getActivityIcon(activity.type, activity.status)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-gray-900 text-sm leading-snug">{activity.title}</p>
+                          {index === 0 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                              Nouveau
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-600 text-sm mt-1 line-clamp-2">{activity.description}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-gray-400 text-xs">{activity.time}</p>
+                          <div className="flex items-center space-x-1">
+                            {activity.type === 'property' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Propriété
+                              </span>
+                            )}
+                            {activity.type === 'contact' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Message
+                              </span>
+                            )}
+                            {activity.type === 'user' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                Utilisateur
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm">{activity.title}</p>
-                      <p className="text-gray-600 text-sm">{activity.description}</p>
-                      <p className="text-gray-400 text-xs mt-1">{activity.time}</p>
-                    </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <TrendingUp className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p>Aucune activité récente</p>
+                <div className="text-center py-8 text-gray-500">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <TrendingUp className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Aucune activité récente</p>
+                  <p className="text-xs text-gray-500">Les dernières actions apparaîtront ici</p>
                 </div>
               )}
             </div>
             
             {recentActivity.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  {recentActivity.length} activité{recentActivity.length > 1 ? 's' : ''} récente{recentActivity.length > 1 ? 's' : ''}
+                </div>
                 <Link 
-                  href="/admin/activity"
-                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                  href="/admin/analytics"
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center group"
                 >
-                  Voir toute l'activité →
+                  Voir les analyses
+                  <BarChart3 className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
             )}

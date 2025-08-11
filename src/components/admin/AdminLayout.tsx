@@ -14,7 +14,8 @@ import {
   X, 
   LogOut,
   Home,
-  BarChart3
+  BarChart3,
+  Clock
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Contacts', href: '/admin/contacts', icon: MessageSquare },
   { name: 'Utilisateurs', href: '/admin/users', icon: Users },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { name: 'Activité', href: '/admin/activity', icon: Clock },
   { name: 'Paramètres', href: '/admin/settings', icon: Settings },
 ]
 
