@@ -20,7 +20,8 @@
     "properties:featured": "node scripts/mark-featured-properties.js",
     "debug:home": "echo 'Test page d\\'accueil:' && curl -s http://localhost:3000/api/properties?limit=3 | head -10",
     "test:featured": "node scripts/test-featured-fix.js",
-    "check:images": "node scripts/check-images-config.js"
+    "check:images": "node scripts/check-images-config.js",
+    "domain:setup": "node scripts/setup-domain.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

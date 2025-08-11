@@ -80,7 +80,19 @@ const nextConfig = {
         source: '/admin',
         destination: '/admin/dashboard',
         permanent: false
-      }
+      },
+      // Redirection www vers domaine principal
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.(?<domain>.*)',
+          },
+        ],
+        destination: 'https://:domain/:path*',
+        permanent: true,
+      },
     ]
   },
 
