@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Configuration Supabase avec validation d'environnement - v2
+// Configuration Supabase avec validation d'environnement - DEPLOY_NOW
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
