@@ -202,4 +202,4 @@ Pour toute question ou support :
 
 ### 🌟 **Made with ❤️ in Cameroon**
 
-*Application développée avec les dernières technologies web pour offrir une expérience utilisateur exceptionnelle dans le domaine de l'immobilier camerounais.*
+*Application développée avec les dernières technologies web pour offrir une expérience utilisateur exceptionnelle dans le domaine de l'immobilier camerounais.*# Force redeploy - Sat Aug 30 00:41:35 WAT 2025
