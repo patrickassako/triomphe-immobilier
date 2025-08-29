@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
     // Récupérer les dernières propriétés ajoutées
     const { data: recentProperties } = await supabase
       .from('properties')
-      .select('id, title, property_type, location, created_at, is_published')
+      .select('id, title, property_type, location_id, created_at, is_published')
       .order('created_at', { ascending: false })
       .limit(Math.min(limit, 5))
 
     // Récupérer les derniers contacts
     const { data: recentContacts } = await supabase
       .from('contacts')
-      .select('id, subject, name, created_at, status')
+      .select('id, subject, first_name, last_name, created_at, status')
       .order('created_at', { ascending: false })
       .limit(Math.min(limit, 5))
 
@@ -57,11 +57,12 @@ export async function GET(request: NextRequest) {
 
     // Ajouter les contacts
     recentContacts?.forEach(contact => {
+      const fullName = `${contact.first_name} ${contact.last_name}`.trim()
       activities.push({
         id: `contact-${contact.id}`,
         type: 'contact',
         title: contact.status === 'new' ? 'Nouveau message' : 'Message traité',
-        description: `${contact.name}: ${contact.subject}`,
+        description: `${fullName}: ${contact.subject}`,
         time: formatTimeAgo(contact.created_at),
         status: contact.status === 'new' ? 'info' : 'success',
         metadata: contact
